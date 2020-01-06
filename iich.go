@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"github.com/Mignet/mapreduce"
 	"github.com/huichen/sego"
-	"github.com/syndtr/goleveldb/leveldb"
 	"io"
 	"io/ioutil"
 	"log"
+	"net/rpc"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -16,7 +16,15 @@ import (
 
 var segmenter sego.Segmenter
 var stopTokens string
-var db *leveldb.DB
+
+type Response struct {
+	Success bool
+	Message string
+}
+
+type Request struct {
+	KvList []string
+}
 
 // The mapping function is called once for each piece of the input.
 // In this framework, the key is the name of the file that is being processed,
@@ -94,11 +102,6 @@ func main() {
 			panic(err)
 		}
 		stopTokens = string(contents)
-		db, errdb := leveldb.OpenFile("kvs/iich", nil)
-		if errdb != nil {
-			log.Fatal(errdb)
-		}
-		defer db.Close()
 		if os.Args[1] == "master" {
 			var mr *mapreduce.Master
 			if os.Args[2] == "sequential" {
@@ -111,12 +114,27 @@ func main() {
 			mapreduce.RunWorker(os.Args[2], os.Args[3], mapF, reduceF, 100, nil)
 		}
 
+		var kvs []string
 		readLines("mrtmp.iiseq", func(line string) {
 			line = strings.TrimRight(line, "\r\n ")
 			kv := strings.Split(line, ": ")
 			log.Printf("{%s},{%s}", kv[0], kv[1])
-			db.Put([]byte(kv[0]), []byte(kv[1]), nil)
+			kvs = append(kvs, line)
 		})
+		var (
+			addr     = "127.0.0.1:1573"
+			request  = &Request{kvs}
+			response = new(Response)
+		)
+		client, _ := rpc.Dial("tcp", addr)
+		defer client.Close()
+
+		client.Call("DBManager.BatchPut", request, response)
+		if response.Success {
+			log.Println(response.Message)
+		} else {
+			log.Println("error", response.Message)
+		}
 
 		files, _ := filepath.Glob("mrtmp.iiseq*")
 		for _, s := range files {
