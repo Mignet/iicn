@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"net/rpc"
-	"strings"
 	"time"
 )
 
@@ -19,9 +18,14 @@ type Response struct {
 	Message string
 }
 
+type Kv struct {
+	Key string
+	Val string
+}
+
 //put kv param Request
 type Request struct {
-	KvList []string
+	KvList []Kv
 }
 
 type DBManager struct {
@@ -40,15 +44,10 @@ func (h *DBManager) BatchPut(req Request, res *Response) (err error) {
 		if b == nil {
 			b, _ = tx.CreateBucket([]byte("iich"))
 		}
-		for _, line := range req.KvList {
-			kv := strings.Split(line, ": ")
-			if len(kv) < 2 {
-				res.Success = false
-				res.Message = "KV error"
-				return errors.New("key val error")
-			}
-			log.Printf("{%s},{%s}", kv[0], kv[1])
-			err := b.Put([]byte(kv[0]), []byte(kv[1]))
+		for _, kv := range req.KvList {
+
+			log.Printf("{%s},{%s}", kv.Key, kv.Val)
+			err := b.Put([]byte(kv.Key), []byte(kv.Val))
 			if err != nil {
 				res.Success = false
 				res.Message = "Put Failed"
@@ -98,7 +97,12 @@ func main() {
 		err := db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket([]byte("iich"))
 			v := b.Get([]byte(key))
-			fmt.Fprintf(w, "The answer is: %s", v)
+			if v != nil && len(v) > 0 {
+				fmt.Fprintf(w, "The answer is: %s", v)
+			} else {
+				fmt.Fprintf(w, "Not exist", v)
+
+			}
 			return nil
 		})
 		if err != nil {

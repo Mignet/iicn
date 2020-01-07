@@ -21,9 +21,12 @@ type Response struct {
 	Success bool
 	Message string
 }
-
+type Kv struct {
+	Key string
+	Val string
+}
 type Request struct {
-	KvList []string
+	KvList []Kv
 }
 
 // The mapping function is called once for each piece of the input.
@@ -114,12 +117,12 @@ func main() {
 			mapreduce.RunWorker(os.Args[2], os.Args[3], mapF, reduceF, 100, nil)
 		}
 
-		var kvs []string
+		var kvs []Kv
 		readLines("mrtmp.iiseq", func(line string) {
 			line = strings.TrimRight(line, "\r\n ")
 			kv := strings.Split(line, ": ")
 			log.Printf("{%s},{%s}", kv[0], kv[1])
-			kvs = append(kvs, line)
+			kvs = append(kvs, Kv{kv[0], kv[1]})
 		})
 		var (
 			addr     = "127.0.0.1:1573"
@@ -140,7 +143,7 @@ func main() {
 		for _, s := range files {
 			err := os.Remove(s)
 			if err != nil {
-				// 删除失败
+				// 临时文件删除失败
 				log.Println(err)
 			}
 		}
