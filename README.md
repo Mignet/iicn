@@ -7,9 +7,10 @@
 
 ## 使用说明
 > 1.做分词并生成倒排索引并写入db
-执行go run iich.go master sequential pg-ch01.txt pg-ch02.txt
+  执行>``go run iich.go master sequential pg-ch01.txt pg-ch02.txt``
+
 > 2.启动web服务
-执行go run server.go
+  执行>``go run server.go``
 
 ## 更新历史
 ### v1.1
