@@ -73,7 +73,7 @@ func main() {
 	}
 	defer db.Close()
 
-	go func(db *bolt.DB) {
+	go func() {
 		// Publish our Handler methods
 		rpc.Register(&DBManager{db})
 		// Create a TCP listener that will listen on `Port`
@@ -82,7 +82,7 @@ func main() {
 		defer listener.Close()
 		// Wait for incoming connections
 		rpc.Accept(listener)
-	}(db)
+	}()
 
 	http.HandleFunc("/s", func(w http.ResponseWriter, r *http.Request) {
 		keys, ok := r.URL.Query()["wd"]
@@ -110,6 +110,6 @@ func main() {
 		}
 
 	})
-
+	log.Println("Service on http://localhost:8080/s?wd=keyword")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
