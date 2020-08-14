@@ -9,7 +9,7 @@ import (
 	"log"
 	"net/rpc"
 	"os"
-	"path/filepath"
+	// "path/filepath"
 	"strconv"
 	"strings"
 )
@@ -113,41 +113,35 @@ func main() {
 				mr = mapreduce.Distributed("iiseq", os.Args[3:], 3, os.Args[2])
 			}
 			mr.Wait()
+
+			var kvs []Kv
+			readLines("mrtmp.iiseq", func(line string) {
+				line = strings.TrimRight(line, "\r\n ")
+				kv := strings.Split(line, ": ")
+				log.Printf("{%s},{%s}", kv[0], kv[1])
+				kvs = append(kvs, Kv{kv[0], kv[1]})
+			})
+			var (
+				addr     = "127.0.0.1:1573"
+				request  = &Request{kvs}
+				response = new(Response)
+			)
+			client, _ := rpc.Dial("tcp", addr)
+			defer client.Close()
+
+			client.Call("DBManager.BatchPut", request, response)
+			if response.Success {
+				log.Println(response.Message)
+			} else {
+				log.Println("error", response.Message)
+			}
+
+			mr.CleanupFiles()
+
+			log.Println("iich success!")
 		} else {
 			mapreduce.RunWorker(os.Args[2], os.Args[3], mapF, reduceF, 100, nil)
 		}
 
-		var kvs []Kv
-		readLines("mrtmp.iiseq", func(line string) {
-			line = strings.TrimRight(line, "\r\n ")
-			kv := strings.Split(line, ": ")
-			log.Printf("{%s},{%s}", kv[0], kv[1])
-			kvs = append(kvs, Kv{kv[0], kv[1]})
-		})
-		var (
-			addr     = "127.0.0.1:1573"
-			request  = &Request{kvs}
-			response = new(Response)
-		)
-		client, _ := rpc.Dial("tcp", addr)
-		defer client.Close()
-
-		client.Call("DBManager.BatchPut", request, response)
-		if response.Success {
-			log.Println(response.Message)
-		} else {
-			log.Println("error", response.Message)
-		}
-
-		files, _ := filepath.Glob("mrtmp.iiseq*")
-		for _, s := range files {
-			err := os.Remove(s)
-			if err != nil {
-				// 临时文件删除失败
-				log.Println(err)
-			}
-		}
-
-		log.Println("iich success!")
 	}
 }

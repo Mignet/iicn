@@ -6,11 +6,13 @@
 我使用了go mod来管理依赖
 
 ## 使用说明
-> 1.做分词并生成倒排索引并写入db
+> 1.启动主服务，提供web搜索监听和索引写入监听
+  执行>``go run server.go``
+
+> 2.做分词并生成倒排索引并写入db
   执行>``go run iich.go master sequential pg-ch01.txt pg-ch02.txt``
 
-> 2.启动web服务
-  执行>``go run server.go``
+
 
 ## 更新历史
 ### v1.1
